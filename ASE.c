@@ -4,6 +4,7 @@
 #define Nk 4
 #define Nr 10
 
+typedef unsigned char uint8_t;
 typedef uint8_t state_t[4][4];
 
 static const uint8_t sbox[256] = {
@@ -58,3 +59,18 @@ static const uint8_t rsbox[256] = {
 
 static const uint8_t Rcon[11] = {0x8d, 0x01, 0x02, 0x04, 0x08, 0x10,
                                  0x20, 0x40, 0x80, 0x1b, 0x36};
+
+#define getSBoxValue(num) (sbox[(num)])
+#define getSBoxInvert(num) (rsbox[(num)])
+
+static void KeyExpansion(uint8_t *RoundKey, const uint8_t *Key) {
+    unsigned i, j, k;
+    uint8_t tempa[4];
+
+    for (i = 0; i < Nk; i++) {
+        RoundKey[(i * 4) + 0] = Key[(i * 4) + 0];
+        RoundKey[(i * 4) + 1] = Key[(i * 4) + 1];
+        RoundKey[(i * 4) + 2] = Key[(i * 4) + 2];
+        RoundKey[(i * 4) + 3] = Key[(i * 4) + 3];
+    }
+}
