@@ -1,10 +1,10 @@
 #include <string.h>
+#include "aes.h"
 
 #define Nb 4
 #define Nk 4
 #define Nr 10
 
-typedef unsigned char uint8_t;
 typedef uint8_t state_t[4][4];
 
 static const uint8_t sbox[256] = {
@@ -110,6 +110,11 @@ static void KeyExpansion(uint8_t *RoundKey, const uint8_t *Key) {
         RoundKey[j + 2] = RoundKey[k + 2] ^ tempa[2];
         RoundKey[j + 3] = RoundKey[k + 3] ^ tempa[3];
     }
+}
+
+void AES_init_ctx(struct AES_ctx* ctx, const uint8_t* key)
+{
+  KeyExpansion(ctx->RoundKey, key);
 }
 
 static void AddRoundKey(uint8_t round, state_t *state,
