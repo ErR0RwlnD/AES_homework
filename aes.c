@@ -5,8 +5,6 @@
 #define Nk 4
 #define Nr 10
 
-typedef uint8_t state_t[4][4];
-
 #define Multiply(x, y)                                                         \
     (((y & 1) * x) ^ ((y >> 1 & 1) * xtime(x)) ^                               \
      ((y >> 2 & 1) * xtime(xtime(x))) ^                                        \
@@ -323,4 +321,12 @@ void AES_CBC_decrypt_buffer(struct AES_ctx *ctx, uint8_t *buf,
         memcpy(ctx->Iv, storeNextIv, AES_BLOCKLEN);
         buf += AES_BLOCKLEN;
     }
+}
+
+// only for cmac
+void AES_encrypt(uint8_t *in, uint8_t *out, uint8_t *key) {
+    struct AES_ctx ctx;
+    memcpy(out, in, strlen(in) + 1);
+    AES_init_ctx(&ctx, key);
+    AES_ECB_encrypt(&ctx, out);
 }
