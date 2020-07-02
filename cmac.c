@@ -1,12 +1,29 @@
-#include "aes.h"
 #include "cmac.h"
+#include "aes.h"
+#include <stdlib.h>
+#include <string.h>
 
-uint8_t* AES_cmac(uint8_t* in, unsigned int length, uint8_t* out, uint8_t* key)
-{
-    uint8_t* K1;
-    uint8_t* K2;
-    K1 = (uint8_t*)malloc(16);
-    K2 = (uint8_t*)malloc(16);
+void block_xor(uint8_t *dst, uint8_t *a, uint8_t *b) {
+    for (int j = 0; j < 16; j++) {
+        dst[j] = a[j] ^ b[j];
+    }
+}
+
+void block_leftshift(uint8_t *dst, uint8_t *src) {
+    uint8_t ovf = 0x00;
+    for (int i = 15; i >= 0; i--) {
+        dst[i] = src[i] << 1;
+        dst[i] |= ovf;
+        ovf = (src[i] & 0x80) ? 1 : 0;
+    }
+}
+
+void *AES_cmac(uint8_t *in, unsigned int length, uint8_t *out,
+                  uint8_t *key) {
+    uint8_t *K1;
+    uint8_t *K2;
+    K1 = (uint8_t *)malloc(16);
+    K2 = (uint8_t *)malloc(16);
     GenerateSubkey(key, K1, K2);
 
     int n = (length / const_Bsize);
@@ -33,15 +50,11 @@ uint8_t* AES_cmac(uint8_t* in, unsigned int length, uint8_t* out, uint8_t* key)
         block_xor(M[n - 1], M[n - 1], K2);
     }
 
-    uint8_t X[] = {
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00
-    };
+    uint8_t X[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
     uint8_t Y[const_Bsize];
 
-    for (auto i = 0; i < n - 1; i++) {
+    for (int i = 0; i < n - 1; i++) {
         block_xor(Y, M[i], X);
         AES_encrypt(Y, X, key);
     }
@@ -49,15 +62,13 @@ uint8_t* AES_cmac(uint8_t* in, unsigned int length, uint8_t* out, uint8_t* key)
     AES_encrypt(Y, out, key);
     free(K1);
     free(K2);
-    return out;
 }
 
-bool verify_mac(uint8_t* in, unsigned int length, uint8_t* out, uint8_t* key)
-{
+bool verify_mac(uint8_t *in, unsigned int length, uint8_t *out, uint8_t *key) {
     bool flag = true;
     uint8_t result[16];
-    AES_cmac(in, length, (uint8_t*)result, key);
-    for (auto i = 0; i < const_Bsize; i++) {
+    AES_cmac(in, length, (uint8_t *)result, key);
+    for (int i = 0; i < const_Bsize; i++) {
         if (!(result[i] ^ out[i])) {
             flag = false;
             break;
@@ -66,42 +77,16 @@ bool verify_mac(uint8_t* in, unsigned int length, uint8_t* out, uint8_t* key)
     return flag;
 }
 
-void block_xor(uint8_t* dst, uint8_t* a, uint8_t* b)
-{
-    for (auto j = 0; j < 16; j++) {
-        dst[j] = a[j] ^ b[j];
-    }
-}
+void GenerateSubkey(uint8_t *key, uint8_t *K1, uint8_t *K2) {
+    uint8_t L[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-void block_leftshift(uint8_t* dst,uint8_t* src)
-{
-    uint8_t ovf = 0x00;
-    for (auto i = 15; i >= 0; i--) {
-        dst[i] = src[i] << 1;
-        dst[i] |= ovf;
-        ovf = (src[i] & 0x80) ? 1 : 0;
-    }
-}
-
-void GenerateSubkey(uint8_t* key, uint8_t* K1, uint8_t* K2)
-{
-    uint8_t L[] = {
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00
-    };
-
-    uint8_t const_Rb[] = {
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x87
-    };
+    uint8_t const_Rb[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                          0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x87};
 
     struct AES_ctx ctx;
-    AES_init_ctx(&ctx,key);
-    AES_ECB_encrypt(&ctx,L);
+    AES_init_ctx(&ctx, key);
+    AES_ECB_encrypt(&ctx, L);
 
     block_leftshift(K1, L);
     if (L[0] & 0x80) {
